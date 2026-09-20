@@ -112,11 +112,14 @@ export function createTimeline(root: HTMLElement, data: AppData, onChange: (i: n
       onChange(idx);
     }
     playing = true;
-    const startT = performance.now();
+    // Aloitushetki otetaan ensimmäisen framen omasta aikaleimasta: rAF:n aikaleima on framen alkuhetki
+    // ja voi olla aikaisempi kuin performance.now() klikkaushetkellä, jolloin ero olisi negatiivinen.
+    let startT: number | null = null;
     const startI = idx;
     const tick = (t: number): void => {
       if (!playing) return;
-      const target = Math.min(last, startI + Math.floor((t - startT) / msPerStep));
+      startT ??= t;
+      const target = Math.max(startI, Math.min(last, startI + Math.floor((t - startT) / msPerStep)));
       if (target !== idx) {
         idx = target;
         onChange(idx);
