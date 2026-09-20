@@ -121,7 +121,7 @@ function buildAreas(a: PxVariable): Area[] {
     const level = levelOf(v.code, name);
     let parent: string | null = null;
     if (level === 'maakunta') currentMk = v.code;
-    else if (level === 'kunta') parent = currentMk;
+    else if (level === 'kunta' || level === 'kehys') parent = currentMk;
     else if (level === 'osa-alue') parent = v.code.split('-')[0];
     areas.push({ code: v.code, name, level, parent });
   }
@@ -370,13 +370,22 @@ async function main(): Promise<void> {
   }
 
   const statCodes = new Set(areas.map((a) => a.code));
+  // Maakuntien nimipisteet (lon/lat ominaisuuksina): polygonin sisäpiste, ei keskipiste
+  const mkLabels = await interiorPoints(
+    maakuntaRaw.features.map((f): PolyFeature<{ code: string }> => ({
+      type: 'Feature',
+      properties: { code: `MK${f.properties.maakunta}` },
+      geometry: f.geometry,
+    })),
+  );
   const maakunnat = await simplifyToWgs84(
     maakuntaRaw.features.map(
-      (f): PolyFeature<{ code: string; name: string; hasData: boolean }> => {
+      (f): PolyFeature<{ code: string; name: string; hasData: boolean; lon: number; lat: number }> => {
         const code = `MK${f.properties.maakunta}`;
+        const [lon, lat] = mkLabels.wgs84.get(code)!;
         return {
           type: 'Feature',
-          properties: { code, name: f.properties.nimi, hasData: statCodes.has(code) },
+          properties: { code, name: f.properties.nimi, hasData: statCodes.has(code), lon, lat },
           geometry: f.geometry,
         };
       },
@@ -406,7 +415,7 @@ async function main(): Promise<void> {
 
   await write('meta.json', {
     source: SOURCE_TEXT,
-    updated: it.created,
+    updated: it.created.replace(/^(\d{4})(\d{2})(\d{2}).*$/, '$1-$2-$3'),
     firstQuarter: quarters[0],
     lastQuarter: quarters[quarters.length - 1],
     lastSalesQuarter: mvQuarters[salesCutoff - 1],

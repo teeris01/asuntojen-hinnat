@@ -163,13 +163,16 @@ Hover-tila jokaiselle alueelle.
 - Älä lisää karttatiilipalvelua tai taustakarttaa
 - Älä kovakoodaa muuttujien nimiä tai aluekoodeja lähdekoodiin
 
-## Tarkistettavaa ennen skeeman lukitsemista
+## Skeema: varmennettu metadatasta (20.9.2026)
 
-Nämä pitää varmistaa metadatasta, niitä ei ole vahvistettu:
-
-- Kattavatko 15is ja 15it saman 87 alueen jaon kuin 13mv ja 13mq
-- Mitkä ketjutetut perusvuodet 15it sisältää ja mikä niistä kattaa koko 1988–2026
-- Kehyskunnat-alueen kuntakokoonpano
+- **Aluejako.** 15it ja 15is käyttävät samaa 87 alueen jakoa samassa järjestyksessä (`alue_43_20260625`). 13mv ja 13mq käyttävät versiota `alue_43_20220407`, jossa koko maa on `ksu` (15it: `SSS`) ja Kehyskunnat `sat` (15it: `keh`); muut 85 koodia ovat samat. Build yhdistää koodilla ja sitten nimellä.
+- **15it ei ole yksi ketjutettu sarja.** Se sisältää seitsemän rinnakkaista perusvuosisarjaa (1970, 1983, 2000, 2005, 2010, 2015, 2020). 1970 on tyhjä, 1983 kattaa vain 27 aluetta, ja **vain 2000=100 kattaa koko 1988–2026Q2** (80 aluetta, joista 77 täydellisesti). 2015=100 kattaa kaikki 87 aluetta, mutta vain 2015Q1 alkaen.
+- **Sarjat eivät ole toistensa uudelleenskaalauksia.** Perusvuoden vaihtuessa indeksi lasketaan uudelleen (2000/2015-suhde vaihtelee jopa 5 % samalla alueella). Siksi build valitsee **yhden perusvuoden per alue** (eniten havaintoja) ja laskee muutoksen vain sen sisällä. Seitsemällä alueella (Suuret kaupungit, Koko maa ilman suuria kaupunkeja, Vantaa 3, Hyvinkää, Järvenpää, Kerava, Riihimäki) sarja alkaa vasta 2015Q1.
+- **Poikkeama Tilastokeskuksen julkaisemasta vuosimuutoksesta.** Oma vuosimuutos (2000=100-sarjasta) vs. 15is:n julkaisema: mediaani-ero 1,0 %-yks, p90 3,3, max 6,7; suurimmilla alueilla ero on alle 0,5. Build tulostaa vertailun joka ajolla.
+- **Kehyskunnat** = Hyvinkää, Järvenpää, Kerava, Kirkkonummi, Nurmijärvi, Riihimäki, Sipoo, Tuusula ja Vihti. Kokoonpano luetaan luokitus-API:sta (`https://data.stat.fi/api/classifications/v2/classifications/alue_43_20260625/classificationItems`, kenttä `explanatoryNotes.includes`).
+- **Osa-alueiden postinumerot ovat julkisia.** Sama luokitus-API kertoo osa-alueen postinumerot (esim. Helsinki 1 = 00100, 00120…), joten yllä oleva "ei julkaise" pitää vain osittain: geometrian kokoaminen postinumeroalueista on mahdollista, mutta ei nykyisessä suunnitelmassa.
+- **Kauppamäärä.** KVKL-määrä (välittäjien kautta) on vain 15iq:ssa (16 aluetta, 2025M01–). 87 alueen kauppamäärä on varainsiirtoveroaineistoa (13mv, 2006Q1–), ja sen tuoreimman neljänneksen luku on selvästi vajaa (Helsinki 2026Q1: 1977 vs. 2852 edellisellä). Build jättää viimeisen neljänneksen määrän pois. Sarjan katko: 2019 asti `lkm_julk19`, 2020Q1 alkaen `lkm_julk20`.
+- **Piirtyvät alueet.** 18 maakuntaa + 27 kaupunkia = 45; lisäksi Kehyskunnat piirretään katkoviivarajana Uusimaan näkymässä.
 
 ## Komennot
 
@@ -177,6 +180,8 @@ Nämä pitää varmistaa metadatasta, niitä ei ole vahvistettu:
 npm run fetch    hakee raakadatan verkosta data/raw-hakemistoon
 npm run build    parsii ja kirjoittaa public/data-hakemiston
 npm run dev      käynnistää kehityspalvelimen
+npm run build:app  tyyppitarkistus + tuotantobuildi (dist/)
+npm test         parserin, sarjalogiikan ja datan invarianttien testit
 ```
 
 `fetch` ajetaan käsin datajulkistusten jälkeen, ei osana buildia.

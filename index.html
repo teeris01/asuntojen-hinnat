@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Asuntojen hinnat</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta name="description" content="Vanhojen osakeasuntojen hintakehitys Suomessa 1988–, laatuvakioidusta hintaindeksistä." />
+  </head>
+  <body>
+    <div id="app">
+      <div id="map" role="application" aria-label="Kartta vanhojen osakeasuntojen hintojen vuosimuutoksesta"></div>
+      <header id="title">
+        <h1>Asuntojen hinnat</h1>
+        <p>Vanhojen osakeasuntojen hintojen vuosimuutos</p>
+      </header>
+      <aside id="legend" aria-label="Selite"></aside>
+      <aside id="panel" aria-live="polite"></aside>
+      <div id="tooltip" role="tooltip" hidden></div>
+      <section id="timeline" aria-label="Aikaliuku"></section>
+      <footer id="source"></footer>
+      <div id="error" hidden></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
