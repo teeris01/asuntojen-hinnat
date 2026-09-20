@@ -9,7 +9,8 @@ import type { AppData } from './types';
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 
-function buildLegend(root: HTMLElement, data: AppData): void {
+/** Selite; palauttaa päivityksen, joka kertoo kun neljännekselle ei ole kauppamääriä (ympyrät vakiokokoisia). */
+function buildLegend(root: HTMLElement, data: AppData): (qi: number) => void {
   const b = data.meta.yoyScale.bound;
   const ticks = [-b, -b / 2, 0, b / 2, b].map((v) => `<span>${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v)}</span>`).join('');
   root.innerHTML = `
@@ -17,8 +18,23 @@ function buildLegend(root: HTMLElement, data: AppData): void {
     <div class="lg-bar" style="background:${cssGradient()}"></div>
     <div class="lg-ticks">${ticks}</div>
     <p class="note">Skaala on kiinnitetty koko aikasarjan yli, joten laman ja nousukauden voi verrata toisiinsa. Ääriarvot näkyvät ääripäiden väreinä.</p>
-    <div class="lg-row"><svg width="46" height="22" aria-hidden="true"><circle cx="7" cy="14" r="4" class="lg-c"/><circle cx="24" cy="12" r="7" class="lg-c"/><circle cx="38" cy="11" r="10" class="lg-c" transform="translate(-4 0)"/></svg><span>Ympyrän koko: kauppamäärä</span></div>
+    <div class="lg-row"><svg width="64" height="26" aria-hidden="true"><circle cx="7" cy="13" r="4" class="lg-c"/><circle cx="24" cy="13" r="7" class="lg-c"/><circle cx="48" cy="13" r="11" class="lg-c"/></svg><span>Ympyrän koko: kauppamäärä neljänneksessä</span></div>
+    <p class="note lg-sales-note" hidden></p>
     <div class="lg-row"><svg width="46" height="22" aria-hidden="true"><circle cx="14" cy="11" r="5" fill="none" stroke="${NO_DATA_STROKE}" stroke-width="1.5"/></svg><span>Ei tietoa: tyhjä ympyrä tai vinoviivat</span></div>`;
+
+  const note = root.querySelector<HTMLElement>('.lg-sales-note')!;
+  const cities = data.areas.filter((a) => a.level === 'kunta');
+  return (qi) => {
+    const hasSales = cities.some((a) => data.series[a.code].sales[qi] !== null);
+    note.hidden = hasSales;
+    if (!hasSales) {
+      const q = data.quarters[qi];
+      note.textContent =
+        q > data.meta.lastSalesQuarter
+          ? `Tälle neljännekselle ei ole vielä kauppamääriä, joten ympyrät ovat vakiokokoisia. Viimeisin kauppamäärätieto: ${fmtQuarter(data.meta.lastSalesQuarter)}.`
+          : 'Kauppamääriä on vasta vuodesta 2006, joten ympyrät ovat vakiokokoisia.';
+    }
+  };
 }
 
 function tooltipHtml(data: AppData, hit: Hit, qi: number): string {
@@ -41,10 +57,12 @@ function tooltipHtml(data: AppData, hit: Hit, qi: number): string {
 
 async function main(): Promise<void> {
   const data = await loadData();
-  let qi = data.quarters.length - 1;
+  // Avaa viimeiseen neljännekseen, jolla on kauppamäärät (tuoreimmilta ei ole, ja silloin ympyrät ovat vakiokokoisia)
+  const salesIdx = data.quarters.indexOf(data.meta.lastSalesQuarter);
+  let qi = salesIdx >= 0 ? salesIdx : data.quarters.length - 1;
   let selection: Selection = { kind: 'none' };
 
-  buildLegend($('legend'), data);
+  const updateLegend = buildLegend($('legend'), data);
   $('source').innerHTML = `Lähde: ${esc(data.meta.source)}. Päivitetty ${esc(data.meta.updated)}. ` +
     `Ennakkotiedot (${data.meta.preliminary.map(fmtQuarter).join(', ')}) voivat tarkentua. ` +
     `Kauppamäärät varainsiirtoveroaineistosta 2006–${fmtQuarter(data.meta.lastSalesQuarter)}; ne eivät ole täysin vertailukelpoisia ${fmtQuarter(data.meta.salesBreaks[0] ?? '')} alkaen.`;
@@ -77,11 +95,18 @@ async function main(): Promise<void> {
     onSelect: choose,
   });
 
-  createTimeline($('timeline'), data, (i) => {
-    qi = i;
-    mapCtl.setQuarter(i);
-    panel.update(selection, i);
-  });
+  createTimeline(
+    $('timeline'),
+    data,
+    (i) => {
+      qi = i;
+      mapCtl.setQuarter(i);
+      panel.update(selection, i);
+      updateLegend(i);
+    },
+    qi,
+  );
+  updateLegend(qi);
   mapCtl.setQuarter(qi);
   panel.update(selection, qi);
 

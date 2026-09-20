@@ -19,11 +19,16 @@ export interface Timeline {
   pause(): void;
 }
 
-export function createTimeline(root: HTMLElement, data: AppData, onChange: (i: number) => void): Timeline {
+export function createTimeline(
+  root: HTMLElement,
+  data: AppData,
+  onChange: (i: number) => void,
+  initial?: number,
+): Timeline {
   const n = data.quarters.length;
   const last = n - 1;
   const msPerStep = PLAY_TOTAL_MS / last;
-  let idx = last;
+  let idx = initial ?? last;
   let playing = false;
   let raf = 0;
 
@@ -72,7 +77,7 @@ export function createTimeline(root: HTMLElement, data: AppData, onChange: (i: n
         <line x1="0" x2="${W}" y1="${zeroY}" y2="${zeroY}" class="tl-zero" />
         <path d="${d}" class="tl-line" />
       </svg>
-      <input class="tl-range" type="range" min="0" max="${last}" step="1" value="${last}" aria-label="Neljännes" />
+      <input class="tl-range" type="range" min="0" max="${last}" step="1" value="${initial ?? last}" aria-label="Neljännes" />
       <div class="tl-marks">${episodes}</div>
       <div class="tl-ticks">${years.join('')}</div>
     </div>`;

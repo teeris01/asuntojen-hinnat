@@ -136,3 +136,4 @@ button.bar-row:focus-visible { box-shadow: 0 0 0 2px var(--muted); }
 @media (min-width: 760px) { .tl-episode { display: block; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 .bars.no-sqm .bar-track, .bars.no-sqm .bar-val { visibility: hidden; }
+.lg-row svg { flex: none; }

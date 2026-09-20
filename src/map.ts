@@ -44,7 +44,7 @@ const R_MIN = 5;
 const R_MAX = 26;
 const R_NO_SALES = 6;
 const ZOOM_STOPS: [number, number][] = [
-  [4, 0.55],
+  [4, 0.9],
   [9, 1.6],
 ];
 
