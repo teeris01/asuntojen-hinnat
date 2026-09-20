@@ -24,7 +24,7 @@ h1, h2, h3, p, ul { margin: 0; padding: 0; }
 .maplibregl-canvas { outline: none; }
 
 /* Kelluvat paneelit */
-#title, #legend, #panel, #timeline, #source, #tooltip, #error {
+#title, #legend, #panel, #timeline, #tooltip, #error {
   position: absolute;
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   border: 1px solid var(--ring);
@@ -34,9 +34,22 @@ h1, h2, h3, p, ul { margin: 0; padding: 0; }
 #title { top: var(--gap); left: var(--gap); padding: 10px 14px; background: transparent; border: 0; backdrop-filter: none; pointer-events: none; }
 #title h1 { font-size: 20px; font-weight: 650; letter-spacing: -0.01em; }
 #title p { color: var(--text-2); font-size: 13px; }
+#title #source { color: var(--muted); font-size: 11px; margin-top: 2px; }
 
-#legend { left: var(--gap); bottom: 148px; width: 260px; padding: 12px 14px; }
-#legend h2 { font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text-2); }
+#legend { left: var(--gap); bottom: 148px; width: 292px; padding: 0; overflow: hidden; }
+.lg-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 14px; background: none; border: 0; cursor: pointer; text-align: left; }
+.lg-head:hover { background: var(--surface-2); }
+.lg-head:focus-visible { outline: 2px solid var(--muted); outline-offset: -2px; }
+.lg-title { font-size: 12px; font-weight: 600; color: var(--text-2); }
+.lg-mini { display: none; width: 44px; height: 8px; border-radius: 4px; }
+.lg-chevron { margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg) translate(-2px, -2px); transition: transform 0.2s; }
+.lg-body { padding: 0 14px 12px; max-height: calc(100vh - 360px); overflow-y: auto; }
+.lg-body h2 { font-size: 12px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+.lg-text { color: var(--text-2); font-size: 12px; margin-top: 10px; }
+#legend.is-collapsed { width: auto; }
+#legend.is-collapsed .lg-body { display: none; }
+#legend.is-collapsed .lg-mini { display: block; }
+#legend.is-collapsed .lg-chevron { transform: rotate(-135deg) translate(-2px, -2px); }
 .lg-bar { height: 10px; border-radius: 5px; }
 .lg-ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 3px; font-variant-numeric: tabular-nums; }
 .lg-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 12px; color: var(--text-2); }
@@ -118,16 +131,15 @@ button.bar-row:focus-visible { box-shadow: 0 0 0 2px var(--muted); }
 .tl-tick { position: absolute; transform: translateX(-50%); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .tl-episode { position: absolute; top: -2px; transform: translateX(-50%); font-size: 10.5px; color: var(--text-2); white-space: nowrap; display: none; }
 
-#source { left: var(--gap); bottom: calc(var(--gap) + 132px); display: none; }
-#source { position: absolute; }
 #error { top: 50%; left: 50%; transform: translate(-50%, -50%); padding: 20px 24px; z-index: 10; }
 #error[hidden] { display: none; }
 
 @media (max-width: 759px) {
   #title { padding: 8px 12px; }
   #title h1 { font-size: 17px; }
-  #legend { left: var(--gap); right: auto; bottom: auto; top: 58px; width: 200px; padding: 8px 10px; }
-  #legend .note, #legend .lg-row { display: none; }
+  #legend { bottom: auto; top: 98px; width: min(292px, calc(100vw - 24px)); z-index: 3; }
+  #legend.is-collapsed { width: auto; }
+  .lg-body { max-height: 45vh; }
   #panel { left: var(--gap); right: var(--gap); width: auto; top: auto; bottom: 148px; height: 32vh; }
   .tl-hint { display: none; }
   .tl-q { font-size: 21px; min-width: 120px; }

@@ -139,7 +139,9 @@ Skaalan ääripäät lasketaan koko aikasarjan yli ja kiinnitetään. Jos skaala
 
 ### Tasot
 
-Maakunnat teemakarttana pohjalla. 27 kaupunkia ympyröinä päällä: väri = muutos-%, koko = kauppamäärä. Sama väriasteikko molemmille tasoille.
+Maakunnat teemakarttana pohjalla. 27 kaupunkia ympyröinä päällä: väri = muutos-%, koko on vakio. Sama väriasteikko molemmille tasoille.
+
+Ympyrän koko oli alun perin kauppamäärä, mutta se poistettiin 20.9.2026: kauppamäärät puuttuvat ennen 2006 ja tuoreimmilta neljänneksiltä, joten oletusnäkymässä (viimeisin neljännes) kaikki ympyrät olisivat olleet vakiokokoisia. Sovellus avautuu aina viimeisimpään neljännekseen. Kauppamäärä näkyy vain vihjeessä ja paneelissa, kun se on saatavilla.
 
 Nimet pisteinä, ei polygonin keskipisteinä. Suomen kuntien muodot ovat sellaisia että automaattinen keskipiste osuu usein veteen.
 
@@ -171,7 +173,7 @@ Hover-tila jokaiselle alueelle.
 - **Poikkeama Tilastokeskuksen julkaisemasta vuosimuutoksesta.** Oma vuosimuutos (2000=100-sarjasta) vs. 15is:n julkaisema: mediaani-ero 1,0 %-yks, p90 3,3, max 6,7; suurimmilla alueilla ero on alle 0,5. Build tulostaa vertailun joka ajolla.
 - **Kehyskunnat** = Hyvinkää, Järvenpää, Kerava, Kirkkonummi, Nurmijärvi, Riihimäki, Sipoo, Tuusula ja Vihti. Kokoonpano luetaan luokitus-API:sta (`https://data.stat.fi/api/classifications/v2/classifications/alue_43_20260625/classificationItems`, kenttä `explanatoryNotes.includes`).
 - **Osa-alueiden postinumerot ovat julkisia.** Sama luokitus-API kertoo osa-alueen postinumerot (esim. Helsinki 1 = 00100, 00120…), joten yllä oleva "ei julkaise" pitää vain osittain: geometrian kokoaminen postinumeroalueista on mahdollista, mutta ei nykyisessä suunnitelmassa.
-- **Kauppamäärä.** KVKL-määrä (välittäjien kautta) on vain 15iq:ssa (16 aluetta, 2025M01–). 87 alueen kauppamäärä on varainsiirtoveroaineistoa (13mv, 2006Q1–), ja sen tuoreimman neljänneksen luku on selvästi vajaa (Helsinki 2026Q1: 1977 vs. 2852 edellisellä). Build jättää viimeisen neljänneksen määrän pois. Sarjan katko: 2019 asti `lkm_julk19`, 2020Q1 alkaen `lkm_julk20`.
+- **Kauppamäärä.** (Ei enää karttakoodauksessa, ks. Tasot.) KVKL-määrä (välittäjien kautta) on vain 15iq:ssa (16 aluetta, 2025M01–). 87 alueen kauppamäärä on varainsiirtoveroaineistoa (13mv, 2006Q1–), ja sen tuoreimman neljänneksen luku on selvästi vajaa (Helsinki 2026Q1: 1977 vs. 2852 edellisellä). Build jättää viimeisen neljänneksen määrän pois. Sarjan katko: 2019 asti `lkm_julk19`, 2020Q1 alkaen `lkm_julk20`.
 - **Piirtyvät alueet.** 18 maakuntaa + 27 kaupunkia = 45; lisäksi Kehyskunnat piirretään katkoviivarajana Uusimaan näkymässä.
 
 ## Komennot

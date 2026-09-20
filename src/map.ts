@@ -39,19 +39,16 @@ const FINLAND: [[number, number], [number, number]] = [
 ];
 const DRILL_MS = 700;
 
-// Ympyrän säde (px): kauppamäärän neliöjuuri -> pinta-ala on suoraan verrannollinen kauppamäärään
-const R_MIN = 5;
-const R_MAX = 26;
-const R_NO_SALES = 6;
-const ZOOM_STOPS: [number, number][] = [
-  [4, 0.9],
-  [9, 1.6],
+// Kaupunkiympyrän säde (px) zoomin mukaan. Koko on vakio: väri on ainoa koodattu muuttuja (vuosimuutos).
+const RADIUS_STOPS: [number, number][] = [
+  [4, 7],
+  [9, 12],
 ];
 
-function zoomFactor(z: number): number {
-  const [[z0, k0], [z1, k1]] = ZOOM_STOPS;
-  const t = Math.max(0, Math.min(1, (z - z0) / (z1 - z0)));
-  return k0 + (k1 - k0) * t;
+function radiusAt(zoom: number): number {
+  const [[z0, r0], [z1, r1]] = RADIUS_STOPS;
+  const t = Math.max(0, Math.min(1, (zoom - z0) / (z1 - z0)));
+  return r0 + (r1 - r0) * t;
 }
 
 function bboxOf(geom: Polygon | MultiPolygon): [[number, number], [number, number]] {
@@ -116,40 +113,16 @@ export function createMap(container: HTMLElement, data: AppData, cb: MapCallback
 
   function padding() {
     const w = window.innerWidth;
-    if (w < 760) return { top: 120, left: 10, right: 10, bottom: Math.round(window.innerHeight * 0.32) + 156 };
+    if (w < 760) return { top: 150, left: 10, right: 10, bottom: Math.round(window.innerHeight * 0.32) + 156 };
     return { top: 80, left: 24, right: 420, bottom: 150 };
   }
 
-  // Suurimmat kaupungit ensin: pienet ympyrät piirtyvät isojen päälle
-  const meanSales = (code: string): number => {
+  const cities = data.kaupungit;
+  // Nimien törmäystarkistuksessa suuremmat kaupungit voittavat; kauppamäärän keskiarvo kuvaa kaupungin kokoa
+  const weight = (code: string): number => {
     const v = (data.series[code]?.sales ?? []).filter((x): x is number => x !== null);
-    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0;
+    return v.length ? v.reduce((acc, x) => acc + x, 0) / v.length : 0;
   };
-  const cities = {
-    ...data.kaupungit,
-    features: [...data.kaupungit.features].sort((a, b) => meanSales(b.properties.code) - meanSales(a.properties.code)),
-  };
-  let sqrtMax = 1;
-  for (const f of cities.features) {
-    for (const v of data.series[f.properties.code]?.sales ?? []) if (v !== null) sqrtMax = Math.max(sqrtMax, Math.sqrt(v));
-  }
-
-  const radiusAt = (sales: number | null, zoom: number): number =>
-    zoomFactor(zoom) * (sales === null ? R_NO_SALES : R_MIN + (R_MAX - R_MIN) * Math.min(1, Math.sqrt(sales) / sqrtMax));
-
-  function radiusExpr(): unknown[] {
-    const at = (z: number) => [
-      '*',
-      zoomFactor(z),
-      [
-        'case',
-        ['boolean', ['feature-state', 'hasSales'], false],
-        ['+', R_MIN, ['*', R_MAX - R_MIN, ['min', 1, ['/', ['sqrt', ['to-number', ['feature-state', 'sales'], 0]], sqrtMax]]]],
-        R_NO_SALES,
-      ],
-    ];
-    return ['interpolate', ['linear'], ['zoom'], ZOOM_STOPS[0][0], at(ZOOM_STOPS[0][0]), ZOOM_STOPS[1][0], at(ZOOM_STOPS[1][0])];
-  }
 
   const has = ['boolean', ['feature-state', 'has'], false];
   const yoy = ['to-number', ['feature-state', 'yoy'], 0];
@@ -199,7 +172,7 @@ export function createMap(container: HTMLElement, data: AppData, cb: MapCallback
     for (const [code, l] of cityLabels) {
       l.el.classList.toggle('is-hidden', !(mk !== null && l.parent === mk));
       l.el.classList.toggle('is-active', selection.kind === 'city' && selection.code === code);
-      l.marker.setOffset([0, radiusAt(data.series[code]?.sales?.[qi] ?? null, z) + 2]);
+      l.marker.setOffset([0, radiusAt(z) + 2]);
     }
     hideCollisions();
   }
@@ -210,7 +183,7 @@ export function createMap(container: HTMLElement, data: AppData, cb: MapCallback
     const placed: { x0: number; y0: number; x1: number; y1: number }[] = [];
     const items: { l: LabelItem; below: number }[] = [
       ...[...mkLabels.values()].map((l) => ({ l, below: 0 })),
-      ...[...cityLabels.entries()].map(([code, l]) => ({ l, below: radiusAt(data.series[code]?.sales?.[qi] ?? null, z) + 2 })),
+      ...[...cityLabels.values()].map((l) => ({ l, below: radiusAt(z) + 2 })),
     ];
     items.sort((a, b) => b.l.priority - a.l.priority);
     for (const { l, below } of items) {
@@ -269,13 +242,13 @@ export function createMap(container: HTMLElement, data: AppData, cb: MapCallback
     ];
     const circles = map.queryRenderedFeatures(box, { layers: ['city-circles'] }) as maplibregl.MapGeoJSONFeature[];
     if (circles.length) {
-      // Tarkin osuma: pienin ympyrä (se on piirretty päällimmäiseksi)
-      const z = map.getZoom();
-      circles.sort(
-        (a, b) =>
-          radiusAt(data.series[a.properties.code]?.sales?.[qi] ?? null, z) -
-          radiusAt(data.series[b.properties.code]?.sales?.[qi] ?? null, z),
-      );
+      // Ympyrät ovat samankokoisia: valitaan se, jonka keskipiste on lähinnä osoitinta
+      const dist = (f: maplibregl.MapGeoJSONFeature): number => {
+        const [lng, lat] = (f.geometry as unknown as { coordinates: [number, number] }).coordinates;
+        const q = map.project([lng, lat]);
+        return Math.hypot(q.x - point.x, q.y - point.y);
+      };
+      circles.sort((a, b) => dist(a) - dist(b));
       return { kind: 'city', code: circles[0].properties.code as string };
     }
     const polys = map.queryRenderedFeatures(point, { layers: ['mk-fill'] }) as maplibregl.MapGeoJSONFeature[];
@@ -340,13 +313,12 @@ export function createMap(container: HTMLElement, data: AppData, cb: MapCallback
         type: 'circle',
         source: 'kaupungit',
         paint: {
-          'circle-radius': radiusExpr() as never,
+          'circle-radius': ['interpolate', ['linear'], ['zoom'], ...RADIUS_STOPS.flat()] as never,
           'circle-color': ['case', has, colorExpression(yoy, bound), 'rgba(0,0,0,0)'] as never,
           'circle-opacity': ['case', flag('dim'), 0.3, 0.95],
           'circle-stroke-color': ['case', flag('selected'), '#ffffff', flag('hover'), '#ffffff', has, PAGE, NO_DATA_STROKE] as never,
           'circle-stroke-width': ['case', flag('selected'), 2.5, flag('hover'), 2.5, 1.5],
           'circle-stroke-opacity': ['case', flag('dim'), 0.35, 1],
-          'circle-radius-transition': { duration: 0 },
         },
       });
 
@@ -356,7 +328,7 @@ export function createMap(container: HTMLElement, data: AppData, cb: MapCallback
         new maplibregl.Marker({ element: outer, anchor: 'center' }).setLngLat([f.properties.lon, f.properties.lat]).addTo(map);
         const mkSales = cities.features
           .filter((c) => c.properties.parent === f.properties.code)
-          .reduce((acc, c) => acc + meanSales(c.properties.code), 0);
+          .reduce((acc, c) => acc + weight(c.properties.code), 0);
         mkLabels.set(f.properties.code, { el: label, lngLat: [f.properties.lon, f.properties.lat], priority: mkSales });
       }
       for (const f of cities.features) {
@@ -369,7 +341,7 @@ export function createMap(container: HTMLElement, data: AppData, cb: MapCallback
           marker,
           parent: f.properties.parent,
           lngLat: f.geometry.coordinates as [number, number],
-          priority: meanSales(f.properties.code),
+          priority: weight(f.properties.code),
         });
       }
 
@@ -395,7 +367,7 @@ export function createMap(container: HTMLElement, data: AppData, cb: MapCallback
         cb.onSelect(hit.kind === 'city' ? { kind: 'city', code: hit.code } : { kind: 'maakunta', code: hit.code });
       });
       map.on('zoom', () => {
-        for (const [code, l] of cityLabels) l.marker.setOffset([0, radiusAt(data.series[code]?.sales?.[qi] ?? null, map.getZoom()) + 2]);
+        for (const l of cityLabels.values()) l.marker.setOffset([0, radiusAt(map.getZoom()) + 2]);
       });
       map.on('moveend', refreshLabels);
       window.addEventListener('resize', () => map.fitBounds(FINLAND, { padding: padding(), duration: 0 }));
@@ -410,10 +382,9 @@ export function createMap(container: HTMLElement, data: AppData, cb: MapCallback
           for (const f of cities.features) {
             const s = data.series[f.properties.code];
             const v = s?.yoy[i] ?? null;
-            const n = s?.sales[i] ?? null;
             map.setFeatureState(
               { source: 'kaupungit', id: f.properties.code },
-              { has: v !== null, yoy: v ?? 0, hasSales: n !== null, sales: n ?? 0 },
+              { has: v !== null, yoy: v ?? 0 },
             );
           }
           refreshLabels();
